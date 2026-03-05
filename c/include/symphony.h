@@ -75,7 +75,7 @@ struct symphony_workspace {
  * Session structure - Live coding agent session
  */
 struct symphony_session {
-    char session_id[MAX_IDENTIFIER_LEN];
+    char session_id[MAX_IDENTIFIER_LEN * 2];  /* thread_id-turn_id */
     char thread_id[MAX_IDENTIFIER_LEN];
     char turn_id[MAX_IDENTIFIER_LEN];
     pid_t codex_pid;

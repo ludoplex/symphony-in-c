@@ -178,7 +178,7 @@ symphony_error_t config_load(symphony_config_t *cfg, const char *workflow_path) 
     
     /* Load active and terminal states */
     int count;
-    char states[16][MAX_STATE_LEN];
+    (void)count;  /* Used in parsing loops */
     
     workflow_get_nested_string(wf, "tracker", "active_states", buf, sizeof(buf));
     if (buf[0]) {

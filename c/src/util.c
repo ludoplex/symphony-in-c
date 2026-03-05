@@ -468,9 +468,9 @@ char *util_format_iso8601(time_t t) {
     struct tm *tm = gmtime(&t);
     if (!tm) return NULL;
     
-    char *buf = malloc(32);
+    char *buf = malloc(64);  /* ISO8601: YYYY-MM-DDTHH:MM:SSZ = 20 chars + padding */
     if (buf) {
-        snprintf(buf, 32, "%04d-%02d-%02dT%02d:%02d:%02dZ",
+        snprintf(buf, 64, "%04d-%02d-%02dT%02d:%02d:%02dZ",
                  tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
                  tm->tm_hour, tm->tm_min, tm->tm_sec);
     }

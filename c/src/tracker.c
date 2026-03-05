@@ -28,7 +28,7 @@ struct tracker_client {
 };
 
 /*
- * cURL write callback
+ * Response buffer for cURL
  */
 typedef struct {
     char *data;
@@ -36,7 +36,10 @@ typedef struct {
     size_t capacity;
 } response_buffer_t;
 
-static size_t curl_write_callback(char *ptr, size_t size, size_t nmemb, void *userdata) {
+/*
+ * cURL write callback
+ */
+static size_t write_callback_fn(char *ptr, size_t size, size_t nmemb, void *userdata) {
     response_buffer_t *buf = (response_buffer_t *)userdata;
     size_t realsize = size * nmemb;
     
@@ -140,7 +143,7 @@ static char *tracker_graphql(tracker_client_t *client, const char *query, const 
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, client->headers);
     curl_easy_setopt(curl, CURLOPT_POST, 1L);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_callback);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback_fn);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, HTTP_TIMEOUT_MS);
     

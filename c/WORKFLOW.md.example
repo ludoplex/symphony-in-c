@@ -1,0 +1,75 @@
+---
+# Symphony Workflow Configuration
+# Copy this file and customize for your project
+
+tracker:
+  kind: linear
+  project_slug: YOUR_PROJECT_SLUG
+  api_key: $LINEAR_API_KEY
+  active_states: Todo, In Progress
+  terminal_states: Done, Cancelled, Closed
+
+polling:
+  interval_ms: 30000
+
+workspace:
+  root: ~/symphony_workspaces
+
+hooks:
+  # Run after creating a new workspace
+  after_create: |
+    git init
+    echo "Workspace initialized"
+  
+  # Run before each agent attempt
+  before_run: |
+    echo "Starting agent run"
+  
+  # Run after each agent attempt
+  after_run: |
+    echo "Agent run completed"
+
+agent:
+  max_concurrent_agents: 5
+  max_turns: 20
+  max_retry_backoff_ms: 300000
+
+codex:
+  command: codex app-server
+  turn_timeout_ms: 3600000
+  stall_timeout_ms: 300000
+
+server:
+  port: 8080
+---
+
+# Issue: {{ issue.identifier }}
+
+## {{ issue.title }}
+
+{{ issue.description }}
+
+---
+
+## Instructions
+
+You are an autonomous coding agent working on this issue. Follow these steps:
+
+1. **Understand the requirement** - Read the issue description carefully
+2. **Plan your approach** - Think through the implementation strategy
+3. **Implement the changes** - Make the necessary code modifications
+4. **Test your work** - Verify the changes work correctly
+5. **Document** - Add or update documentation as needed
+
+{% if attempt %}
+### Retry Information
+
+This is retry attempt {{ attempt }}. Review any previous errors and adjust your approach.
+{% endif %}
+
+## Context
+
+- **Issue ID**: {{ issue.id }}
+- **Priority**: {{ issue.priority }}
+- **State**: {{ issue.state }}
+- **URL**: {{ issue.url }}
