@@ -267,6 +267,16 @@ bool util_mkdir_p(const char *path) {
     return result;
 }
 
+/*
+ * Recursive directory removal helper.
+ * 
+ * Note: This function has inherent TOCTOU (time-of-check-to-time-of-use) race
+ * conditions that are unavoidable without platform-specific APIs (like openat/
+ * unlinkat on Linux). The race window is small and the worst case is that the
+ * operation fails (not a security issue in our use case where we only remove
+ * our own workspaces). For security-critical scenarios, use platform-specific
+ * AT_* functions.
+ */
 static bool rm_rf_helper(const char *path) {
     struct stat st;
     if (lstat(path, &st) != 0) {

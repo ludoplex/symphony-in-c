@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <errno.h>
 #include <pthread.h>
@@ -68,6 +69,23 @@ static void http_send_response(int client_fd, int status, const char *content_ty
 }
 
 /*
+ * Safe snprintf wrapper that prevents buffer overflow
+ * Returns the number of characters written, capped to available space
+ */
+static int safe_snprintf(char *buf, size_t size, size_t pos, const char *fmt, ...) {
+    if (pos >= size) return 0;  /* Buffer already full */
+    
+    va_list args;
+    va_start(args, fmt);
+    int written = vsnprintf(buf + pos, size - pos, fmt, args);
+    va_end(args);
+    
+    if (written < 0) return 0;
+    if ((size_t)written >= size - pos) return (int)(size - pos - 1);
+    return written;
+}
+
+/*
  * Generate JSON state response
  */
 static char *generate_state_json(symphony_orchestrator_t *orch) {
@@ -84,7 +102,8 @@ static char *generate_state_json(symphony_orchestrator_t *orch) {
     
     char *timestamp = util_format_iso8601(time(NULL));
     
-    int pos = snprintf(json, size,
+    size_t pos = 0;
+    pos += (size_t)safe_snprintf(json, size, pos,
         "{\n"
         "  \"generated_at\": \"%s\",\n"
         "  \"counts\": {\n"
@@ -108,12 +127,12 @@ static char *generate_state_json(symphony_orchestrator_t *orch) {
     free(timestamp);
     
     /* Running sessions */
-    pos += snprintf(json + pos, size - (size_t)pos, "  \"running\": [\n");
+    pos += (size_t)safe_snprintf(json, size, pos, "  \"running\": [\n");
     for (int i = 0; i < snap->running_count; i++) {
         running_entry_t *entry = &snap->running[i];
         char *started = util_format_iso8601(entry->started_at);
         
-        pos += snprintf(json + pos, size - (size_t)pos,
+        pos += (size_t)safe_snprintf(json, size, pos,
             "    {\n"
             "      \"issue_id\": \"%s\",\n"
             "      \"identifier\": \"%s\",\n"
@@ -132,14 +151,14 @@ static char *generate_state_json(symphony_orchestrator_t *orch) {
         
         free(started);
     }
-    pos += snprintf(json + pos, size - (size_t)pos, "  ],\n");
+    pos += (size_t)safe_snprintf(json, size, pos, "  ],\n");
     
     /* Retry queue */
-    pos += snprintf(json + pos, size - (size_t)pos, "  \"retry_queue\": [\n");
+    pos += (size_t)safe_snprintf(json, size, pos, "  \"retry_queue\": [\n");
     for (int i = 0; i < snap->retry_count; i++) {
         retry_entry_t *entry = &snap->retrying[i];
         
-        pos += snprintf(json + pos, size - (size_t)pos,
+        pos += (size_t)safe_snprintf(json, size, pos,
             "    {\n"
             "      \"issue_id\": \"%s\",\n"
             "      \"identifier\": \"%s\",\n"
@@ -152,9 +171,9 @@ static char *generate_state_json(symphony_orchestrator_t *orch) {
             entry->error,
             i < snap->retry_count - 1 ? "," : "");
     }
-    pos += snprintf(json + pos, size - (size_t)pos, "  ]\n");
+    pos += (size_t)safe_snprintf(json, size, pos, "  ]\n");
     
-    snprintf(json + pos, size - (size_t)pos, "}\n");
+    safe_snprintf(json, size, pos, "}\n");
     
     orchestrator_snapshot_destroy(snap);
     return json;
@@ -224,10 +243,10 @@ static char *generate_state_html(symphony_orchestrator_t *orch) {
         return util_strdup("<p class=\"empty\">Out of memory</p>");
     }
     
-    int pos = 0;
+    size_t pos = 0;
     
     /* Stats cards */
-    pos += snprintf(html + pos, size - (size_t)pos,
+    pos += (size_t)safe_snprintf(html, size, pos,
         "<div class=\"stats\">\n"
         "  <div class=\"stat-card\">\n"
         "    <h3>Running</h3>\n"
@@ -252,13 +271,13 @@ static char *generate_state_html(symphony_orchestrator_t *orch) {
         snap->seconds_running);
     
     /* Running sessions */
-    pos += snprintf(html + pos, size - (size_t)pos,
+    pos += (size_t)safe_snprintf(html, size, pos,
         "<div class=\"section\">\n"
         "  <div class=\"section-header\">Running Sessions</div>\n"
         "  <div class=\"section-body\">\n");
     
     if (snap->running_count > 0) {
-        pos += snprintf(html + pos, size - (size_t)pos,
+        pos += (size_t)safe_snprintf(html, size, pos,
             "    <table>\n"
             "      <thead>\n"
             "        <tr><th>Issue</th><th>Status</th><th>Attempt</th><th>Turns</th></tr>\n"
@@ -267,7 +286,7 @@ static char *generate_state_html(symphony_orchestrator_t *orch) {
         
         for (int i = 0; i < snap->running_count; i++) {
             running_entry_t *entry = &snap->running[i];
-            pos += snprintf(html + pos, size - (size_t)pos,
+            pos += (size_t)safe_snprintf(html, size, pos,
                 "        <tr>\n"
                 "          <td><strong>%s</strong></td>\n"
                 "          <td><span class=\"status-running\">●</span> Running</td>\n"
@@ -279,26 +298,26 @@ static char *generate_state_html(symphony_orchestrator_t *orch) {
                 entry->session.turn_count);
         }
         
-        pos += snprintf(html + pos, size - (size_t)pos,
+        pos += (size_t)safe_snprintf(html, size, pos,
             "      </tbody>\n"
             "    </table>\n");
     } else {
-        pos += snprintf(html + pos, size - (size_t)pos,
+        pos += (size_t)safe_snprintf(html, size, pos,
             "    <p class=\"empty\">No running sessions</p>\n");
     }
     
-    pos += snprintf(html + pos, size - (size_t)pos,
+    pos += (size_t)safe_snprintf(html, size, pos,
         "  </div>\n"
         "</div>\n");
     
     /* Retry queue */
-    pos += snprintf(html + pos, size - (size_t)pos,
+    pos += (size_t)safe_snprintf(html, size, pos,
         "<div class=\"section\">\n"
         "  <div class=\"section-header\">Retry Queue</div>\n"
         "  <div class=\"section-body\">\n");
     
     if (snap->retry_count > 0) {
-        pos += snprintf(html + pos, size - (size_t)pos,
+        pos += (size_t)safe_snprintf(html, size, pos,
             "    <table>\n"
             "      <thead>\n"
             "        <tr><th>Issue</th><th>Attempt</th><th>Error</th></tr>\n"
@@ -307,7 +326,7 @@ static char *generate_state_html(symphony_orchestrator_t *orch) {
         
         for (int i = 0; i < snap->retry_count; i++) {
             retry_entry_t *entry = &snap->retrying[i];
-            pos += snprintf(html + pos, size - (size_t)pos,
+            pos += (size_t)safe_snprintf(html, size, pos,
                 "        <tr>\n"
                 "          <td><strong>%s</strong></td>\n"
                 "          <td>%d</td>\n"
@@ -318,15 +337,15 @@ static char *generate_state_html(symphony_orchestrator_t *orch) {
                 entry->error[0] ? entry->error : "-");
         }
         
-        pos += snprintf(html + pos, size - (size_t)pos,
+        pos += (size_t)safe_snprintf(html, size, pos,
             "      </tbody>\n"
             "    </table>\n");
     } else {
-        pos += snprintf(html + pos, size - (size_t)pos,
+        pos += (size_t)safe_snprintf(html, size, pos,
             "    <p class=\"empty\">No pending retries</p>\n");
     }
     
-    snprintf(html + pos, size - (size_t)pos,
+    safe_snprintf(html, size, pos,
         "  </div>\n"
         "</div>\n");
     
