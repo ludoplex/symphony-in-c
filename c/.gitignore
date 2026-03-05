@@ -1,0 +1,30 @@
+# Build output
+build/
+*.o
+*.a
+*.so
+*.com
+*.exe
+symphony
+
+# Cosmopolitan toolchain
+cosmocc/
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Debug files
+*.dSYM/
+core
+core.*
+
+# Test outputs
+test_output/
